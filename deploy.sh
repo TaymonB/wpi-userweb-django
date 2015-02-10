@@ -4,29 +4,24 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-usage="Usage: $(basename "$0") [-g] [-d project_directory] [-r repository_url] [-b branch] [-p relative_path] db_name db_username db_password"
+usage="Usage: deploy.sh [-o origin_url] [-b branch] [-w work_tree_dir] [-r repository_dir] [-p relative_path] db_name db_username db_password"
 
-group_permissions=false
 branch=master
 relative_path=.
 
-while getopts hgd:r:b:p: OPT; do
+while getopts o:b:w:r:p: OPT; do
   case "$OPT" in
-    h)
-      echo "$usage"
-      exit 0
-      ;;
-    g)
-      group_permissions=true
-      ;;
-    d)
-      project_directory="$OPTARG"
-      ;;
-    r)
-      repository_url="$OPTARG"
+    o)
+      origin_url="$OPTARG"
       ;;
     b)
       branch="$OPTARG"
+      ;;
+    w)
+      work_tree_dir="$OPTARG"
+      ;;
+    r)
+      repository_dir="$OPTARG"
       ;;
     p)
       relative_path="$OPTARG"
@@ -38,56 +33,60 @@ while getopts hgd:r:b:p: OPT; do
   esac
 done
 shift $(($OPTIND-1))
-[[ "${1-x}" = '--' ]] && shift
+[[ "${1-}" = '--' ]] && shift
 if [ $# -ne 3 ]; then
   echo "$usage" >&2
   exit 1
 fi
 
-if ! hash python3.4 2>/dev/null; then
+if ! hash python3.4; then
   cd "$(mktemp -d)"
-  curl 'https://www.python.org/ftp/python/3.4.2/Python-3.4.2.tar.xz' | unxz | tar x
+  curl https://www.python.org/ftp/python/3.4.2/Python-3.4.2.tar.xz | unxz | tar x
   cd Python-3.4.2
   ./configure --prefix="$HOME/.local"
   make install
   if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     export PATH="$HOME/.local/bin:$PATH"
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.profile"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >>~/.profile
   fi
 fi
 
-[[ -d "${project_directory=$1}" ]] || mkdir "$project_directory"
-cd "$project_directory"
-project_name="$(basename "$project_directory")"
+work_tree_dir="$(readlink -f "${work_tree_dir-$1}")"
+[[ -d "$work_tree_dir" ]] || mkdir "$work_tree_dir"
+cd "$work_tree_dir"
+repository_dir="$(readlink -f "${repository_dir-../$(basename "$work_tree_dir").git}")"
+[[ -d "$repository_dir" ]] || mkdir "$repository_dir"
 
-if [[ -z "${repository_url+x}" ]]; then
+if [[ -n "${origin_url-}" ]]; then
+  git clone --bare "$origin_url" "$repository_dir"
+  export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
+  git checkout "$branch"
+  project_name="$(sed 's/^\s\s*os\.environ\.setdefault("DJANGO_SETTINGS_MODULE", "\([[:alpha:]_][[:alnum:]_]*\)\.settings")$/\1/;t;d' manage.py)"
+  python3.4 -m venv venv
+  venv/bin/pip install -r requirements.txt
+else
   python3.4 -m venv venv
   venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-ng django-environ django-sslify flipflop pytz
   venv/bin/pip freeze >requirements.txt
-  venv/bin/django-admin.py startproject --template='https://github.com/TaymonB/wpi-userweb-django/zipball/master' "$project_name" .
-  git init
-  git add "$project_name/" manage.py requirements.txt sample.env static/ templates/
+  project_name="$(basename "$work_tree_dir")"
+  venv/bin/django-admin.py startproject --template=https://github.com/TaymonB/wpi-userweb-django/zipball/master "$project_name" .
+  git init --bare "$repository_dir"
+  export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
+  git add "$project_name/" .gitignore manage.py media/ requirements.txt sample.env static/ templates/
   git commit -m "Created Django project $project_name"
   [[ "$branch" = 'master' ]] || git checkout -b "$branch"
-else
-  git clone "$repository_url" .
-  git checkout "$branch"
-  python3.4 -m venv venv
-  venv/bin/pip install -r requirements.txt
 fi
 
 public_html="$(readlink -f ~/public_html)"
 site_root="$(readlink -f "$public_html/$relative_path")"
-base_url="${site_root/$public_html//~$USER}/"
-project_root="$(readlink -f .)"
+base_url="${site_root/#$public_html//~$USER}/"
 
 cat >.env <<EOF
-DEBUG=false
+DEBUG=False
 DATABASE_URL=mysql://$2:$3@mysql.wpi.edu/$1
 BASE_URL=$base_url
 ASSETS_ROOT=$site_root
-GROUP_PERMISSIONS=$group_permissions
-SECRET_KEY=$(</dev/urandom tr -dc [:print:] | head -c 64)
+SECRET_KEY=$(dd if=/dev/urandom bs=48 count=1 | base64)
 ALLOWED_HOSTS=.wpi.edu
 LANGUAGE_CODE=en-us
 TIME_ZONE=America/New_York
@@ -106,11 +105,12 @@ done
 [[ -d "$site_root" ]] || mkdir "$site_root"
 mkdir "$site_root/media" "$site_root/static"
 
-cat >"$site_root/$project_name.fcgi" <<EOF
-#!$project_root/venv/bin/python
+deploy_name="$(basename "$site_root")"
+cat >"$site_root/$deploy_name.fcgi" <<EOF
+#!$work_tree_dir/venv/bin/python
 import sys
 from flipflop import WSGIServer
-sys.path.insert(0, '$project_root')
+sys.path.insert(0, '$work_tree_dir')
 from $project_name.wsgi import application
 WSGIServer(application).run()
 EOF
@@ -120,56 +120,49 @@ RewriteEngine On
 RewriteBase $base_url
 AddHandler fastcgi-script .fcgi
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)\$ $project_name.fcgi/\$1 [QSA,L]
+RewriteRule ^(.*)\$ $deploy_name.fcgi/\$1 [QSA,L]
 EOF
 
-if $group_permissions; then
-  chmod 771 "$site_root" "$site_root/media" "$site_root/static"
-  chmod 775 "$site_root/$project_name.fcgi"
-  chmod 664 "$site_root/.htaccess"
-else
-  chmod 711 "$site_root" "$site_root/media" "$site_root/static"
-  chmod 755 "$site_root/$project_name.fcgi"
-  chmod 644 "$site_root/.htaccess"
-fi
+chmod 711 "$site_root" "$site_root/media" "$site_root/static"
+chmod 755 "$site_root/$deploy_name.fcgi"
+chmod 644 "$site_root/.htaccess"
 
-git update-index --assume-unchanged manage.py
-sed -i "1s|/usr/bin/env python|$project_root/venv/bin/python|" manage.py
-chmod +x manage.py
-
-cat >.git/hooks/post-receive <<EOF
+cat >"$repository_dir/hooks/post-receive" <<EOF
 #!/usr/bin/env bash
 set -o errexit
 set -o pipefail
 set -o nounset
 read from to branch
 [[ "\$branch" = *'$branch' ]] || exit 0
-../venv/bin/pip install -r ../requirements.txt
-../manage.py migrate --noinput
-../manage.py collectstatic --noinput --clear
-touch $site_root/$project_name.fcgi
+GIT_WORK_TREE='$work_tree_dir' git checkout --force '$branch'
+cd '$work_tree_dir'
+venv/bin/pip install -r requirements.txt
+./manage.py migrate --noinput
+./manage.py collectstatic --noinput --clear
+touch '$site_root/$deploy_name.fcgi'
 EOF
-chmod +x .git/hooks/post-receive
+chmod +x "$repository_dir/hooks/post-receive"
 
 ./manage.py migrate --noinput
 ./manage.py collectstatic --noinput --clear
-./manage.py createsuperuser --noinput --username="$USER" --email="$USER@wpi.edu"
 
 DJANGO_SETTINGS_MODULE="$project_name.settings" venv/bin/python <<EOF
 import django
 django.setup()
-from django.contrib.flatpages.models import FlatPage
-from django.contrib.sites.models import Site
-mysite = Site.objects.get()
-mysite.domain = r"""users.wpi.edu$base_url"""
-mysite.name = r"""$project_name"""
-mysite.save()
-homepage = FlatPage(url='/', title='Home Page', content='''
-  <div class="container">
-    <h1>Home Page</h1>
-    <p>Hi! You&rsquo;ve deployed a Django project! You can configure it through the <a href="admin/">admin interface</a>.</p>
-  </div>
-''')
-homepage.save()
-homepage.sites.add(mysite)
+from django.conf import settings
+from django.contrib.auth import get_user_model
+if not get_user_model().objects.filter(username=r"""$USER""").exists():
+    from django.core.management import call_command
+    call_command('createsuperuser', interactive=False, username=r"""$USER""", email=r"""$USER@wpi.edu""")
+if 'django.contrib.sites' in settings.INSTALLED_APPS:
+    from django.contrib.sites.models import Site
+    mysite = Site.objects.get()
+    mysite.domain = r"""users.wpi.edu$base_url"""
+    mysite.name = r"""$project_name"""
+    mysite.save()
+    if 'django.contrib.flatpages' in settings.INSTALLED_APPS:
+        from django.contrib.flatpages.models import FlatPage
+        homepage = FlatPage(url='/', title='Home Page', content='<div class="container"><h1>Home Page</h1><p>Hi! You&rsquo;ve deployed a Django project! You can configure it through the <a href="admin/">admin interface</a>.</p></div>')
+        homepage.save()
+        homepage.sites.add(mysite)
 EOF

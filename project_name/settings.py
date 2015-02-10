@@ -28,9 +28,6 @@ DATABASES = {'default': env.db()}
 base_url = env('BASE_URL', str, '/')
 if not base_url.endswith('/'):
     base_url += '/'
-CSRF_COOKIE_PATH = LANGUAGE_COOKIE_PATH = SESSION_COOKIE_PATH = CAS_REDIRECT_URL = base_url
-STATIC_URL = urljoin(base_url, 'static/')
-MEDIA_URL = urljoin(base_url, 'media/')
 
 # Collecting static files and storing uploaded files
 assets_root = env('ASSETS_ROOT', environ.Path, None)
@@ -39,12 +36,6 @@ if assets_root is None:
 else:
     STATIC_ROOT = assets_root('static/')
     MEDIA_ROOT = assets_root('media/')
-if env('GROUP_PERMISSIONS', bool, False):
-    FILE_UPLOAD_PERMISSIONS = 0o664
-    FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o771
-else:
-    FILE_UPLOAD_PERMISSIONS = 0o644
-    FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o711
 
 # Security
 SECRET_KEY = env('SECRET_KEY')
@@ -119,11 +110,17 @@ STATICFILES_DIRS = (
     root('static'),
 )
 
+CSRF_COOKIE_PATH = LANGUAGE_COOKIE_PATH = SESSION_COOKIE_PATH = CAS_REDIRECT_URL = base_url
+STATIC_URL = urljoin(base_url, 'static/')
+MEDIA_URL = urljoin(base_url, 'media/')
+
+FILE_UPLOAD_PERMISSIONS = 0o644
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o711
+
 LOGIN_URL = 'django_cas_ng.views.login'
 LOGOUT_URL = 'django_cas_ng.views.logout'
 
-if not DEBUG:
-    CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE = not DEBUG
 
 USE_I18N = USE_L10N = USE_TZ = True
 
