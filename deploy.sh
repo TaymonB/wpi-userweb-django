@@ -4,7 +4,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-usage="Usage: deploy.sh [-o origin_url] [-b branch] [-w work_tree_dir] [-r repository_dir] [-p relative_path] db_name db_username db_password"
+usage='Usage: deploy.sh [-o origin_url] [-b branch] [-w work_tree_dir] [-r repository_dir] [-p relative_path] db_name db_username db_password'
 
 branch=master
 relative_path=.
