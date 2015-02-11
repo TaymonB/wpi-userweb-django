@@ -137,14 +137,14 @@ read from to branch
 GIT_WORK_TREE='$work_tree_dir' git checkout --force '$branch'
 cd '$work_tree_dir'
 venv/bin/pip install -r requirements.txt
-./manage.py migrate --noinput
-./manage.py collectstatic --noinput --clear
+venv/bin/python manage.py migrate --noinput
+venv/bin/python manage.py collectstatic --noinput --clear
 touch '$site_root/$deploy_name.fcgi'
 EOF
 chmod +x "$repository_dir/hooks/post-receive"
 
-./manage.py migrate --noinput
-./manage.py collectstatic --noinput --clear
+venv/bin/python manage.py migrate --noinput
+venv/bin/python manage.py collectstatic --noinput --clear
 
 DJANGO_SETTINGS_MODULE="$project_name.settings" venv/bin/python <<EOF
 import django
