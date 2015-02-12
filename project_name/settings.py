@@ -41,7 +41,6 @@ else:
 SECRET_KEY = env('SECRET_KEY')
 if not DEBUG:
     ALLOWED_HOSTS = env('ALLOWED_HOSTS', list)
-SSLIFY_DISABLE = not env('SSLIFY', bool, not DEBUG)
 
 # Internationalization, etc.
 LANGUAGE_CODE = env('LANGUAGE_CODE')
@@ -68,6 +67,11 @@ SITE_ID = env('SITE_ID', int, 1)
 # CAS
 CAS_SERVER_URL = env('CAS_SERVER_URL')
 
+# LDAP (you should only need to set this in local development environments)
+WPI_LDAP_AUX_AUTH = env('WPI_LDAP_AUX_AUTH', str, (None, None))
+if isinstance(WPI_LDAP_AUX_AUTH, str):
+    WPI_LDAP_AUX_AUTH = tuple(WPI_LDAP_AUX_AUTH.split(':', 1))
+
 # The rest of this stuff doesn't depend on deployment settings.
 
 INSTALLED_APPS = (
@@ -79,6 +83,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.flatpages',
+    'wpi_ldap_aux',
 )
 
 MIDDLEWARE_CLASSES = (

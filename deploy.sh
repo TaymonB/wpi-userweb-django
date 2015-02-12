@@ -66,7 +66,7 @@ if [[ -n "${origin_url-}" ]]; then
   venv/bin/pip install -r requirements.txt
 else
   python3.4 -m venv venv
-  venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-ng django-environ django-sslify flipflop pytz
+  venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-ng django-environ django-sslify flipflop ldap3 pytz
   venv/bin/pip freeze >requirements.txt
   project_name="$(basename "$work_tree_dir")"
   venv/bin/django-admin.py startproject --template=https://github.com/TaymonB/wpi-userweb-django/zipball/master "$project_name" .
@@ -87,7 +87,7 @@ DATABASE_URL=mysql://$2:$3@mysql.wpi.edu/$1
 BASE_URL=$base_url
 ASSETS_ROOT=$site_root
 SECRET_KEY=$(dd if=/dev/urandom bs=48 count=1 | base64)
-ALLOWED_HOSTS=.wpi.edu
+ALLOWED_HOSTS=users.wpi.edu
 LANGUAGE_CODE=en-us
 TIME_ZONE=America/New_York
 EMAIL_URL=smtp://localhost
@@ -149,18 +149,20 @@ venv/bin/python manage.py collectstatic --noinput --clear
 DJANGO_SETTINGS_MODULE="$project_name.settings" venv/bin/python <<EOF
 import django
 django.setup()
+from django.apps import apps
 from django.conf import settings
-from django.contrib.auth import get_user_model
-if not get_user_model().objects.filter(username=r"""$USER""").exists():
-    from django.core.management import call_command
-    call_command('createsuperuser', interactive=False, username=r"""$USER""", email=r"""$USER@wpi.edu""")
-if 'django.contrib.sites' in settings.INSTALLED_APPS:
+if apps.is_installed('django.contrib.auth') and settings.AUTH_USER_MODEL == 'auth.User':
+    from django.contrib.auth.models import User
+    if not User.objects.filter(username=r"""$USER""").exists():
+        from wpi_ldap_aux import populate_from_ldap
+        populate_from_ldap(User.objects.create_superuser(r"""$USER""", None, None))
+if apps.is_installed('django.contrib.sites'):
     from django.contrib.sites.models import Site
     mysite = Site.objects.get()
     mysite.domain = r"""users.wpi.edu$base_url"""
     mysite.name = r"""$project_name"""
     mysite.save()
-    if 'django.contrib.flatpages' in settings.INSTALLED_APPS:
+    if apps.is_installed('django.contrib.flatpages'):
         from django.contrib.flatpages.models import FlatPage
         homepage = FlatPage(url='/', title='Home Page', content='<div class="container"><h1>Home Page</h1><p>Hi! You&rsquo;ve deployed a Django project! You can configure it through the <a href="admin/">admin interface</a>.</p></div>')
         homepage.save()
