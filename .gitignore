@@ -4,8 +4,9 @@
 # virtualenv
 venv/
 
-# Local development database
+# Local development databases
 db.sqlite3
+cas_db.sqlite3
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

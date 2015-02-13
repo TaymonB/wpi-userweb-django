@@ -68,7 +68,7 @@ if [[ -n "${origin_url-}" ]]; then
   venv/bin/pip install -r requirements.txt
 else
   python3.4 -m venv venv
-  venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-ng django-environ django-sslify flipflop ldap3 pytz
+  venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-dev-server django-cas-ng django-environ django-sslify flipflop ldap3 pytz
   venv/bin/pip freeze >requirements.txt
   project_name="$(basename "$work_tree_dir")"
   venv/bin/django-admin.py startproject --template=https://github.com/TaymonB/wpi-userweb-django/zipball/master "$project_name" .

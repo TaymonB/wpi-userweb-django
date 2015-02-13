@@ -65,7 +65,11 @@ SERVER_EMAIL = env('SERVER_EMAIL', str,
 SITE_ID = env('SITE_ID', int, 1)
 
 # CAS
-CAS_SERVER_URL = env('CAS_SERVER_URL')
+if DEBUG:
+    CAS_SERVER_URL = env('CAS_SERVER_URL', str, 'http://localhost:8008/')
+    CAS_DEV_DATABASE = env.db('CAS_DEV_DATABASE_URL')
+else:
+    CAS_SERVER_URL = env('CAS_SERVER_URL')
 
 # LDAP (you should only need to set this in local development environments)
 WPI_LDAP_AUX_AUTH = env('WPI_LDAP_AUX_AUTH', str, (None, None))
@@ -85,6 +89,9 @@ INSTALLED_APPS = (
     'django.contrib.flatpages',
     'wpi_ldap_aux',
 )
+
+if DEBUG:
+    INSTALLED_APPS = ('cas_dev_server',) + INSTALLED_APPS
 
 MIDDLEWARE_CLASSES = (
     'sslify.middleware.SSLifyMiddleware',
