@@ -79,7 +79,7 @@ else
   [[ "$branch" = 'master' ]] || git checkout -b "$branch"
 fi
 
-password="$(dd if=/dev/urandom bs=48 count=1 | base64)"
+password="$(dd if=/dev/urandom bs=48 count=1 | base64 | tr '+/' '-_')"
 mysql --host=mysql.wpi.edu --user="$2" --password="$3" --execute="SET PASSWORD = PASSWORD('$password')" "$1"
 
 public_html="$(readlink -f ~/public_html)"
