@@ -74,7 +74,7 @@ else
   venv/bin/django-admin.py startproject --template=https://github.com/TaymonB/wpi-userweb-django/zipball/master "$project_name" .
   git init --bare "$repository_dir"
   export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
-  git add "$project_name/" .gitignore manage.py media/ requirements.txt sample.env static/ templates/
+  git add .
   git commit -m "Created Django project $project_name"
   [[ "$branch" = 'master' ]] || git checkout -b "$branch"
 fi
