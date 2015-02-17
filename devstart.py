@@ -32,7 +32,7 @@ if __name__ == '__main__':
         execute_from_command_line(['', 'casdevmanage', 'migrate'])
 
         import getpass
-        from django.six import PY3
+        from django.utils.six import PY3
         if PY3:
             raw_input = input
         username = password = ''
