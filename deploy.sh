@@ -62,25 +62,22 @@ if [[ -n "${origin_url-}" ]]; then
   git clone --bare "$origin_url" "$repository_dir"
   export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
   git checkout "$branch"
-  project_name="$(sed 's/^\s\s*os\.environ\.setdefault("DJANGO_SETTINGS_MODULE", "\([[:alpha:]_][[:alnum:]_]*\)\.settings")$/\1/;t;d' manage.py)"
   python3.4 -m venv venv
   venv/bin/pip install -r requirements.txt
 elif git rev-parse --resolve-git-dir "$repository_dir"; then
   export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
   git checkout "$branch"
-  project_name="$(sed 's/^\s\s*os\.environ\.setdefault("DJANGO_SETTINGS_MODULE", "\([[:alpha:]_][[:alnum:]_]*\)\.settings")$/\1/;t;d' manage.py)"
   python3.4 -m venv venv
   venv/bin/pip install -r requirements.txt
 else
   python3.4 -m venv venv
   venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-dev-server django-cas-ng django-environ django-sslify flipflop ldap3 pytz
   venv/bin/pip freeze >requirements.txt
-  project_name="$(basename "$work_tree_dir")"
-  venv/bin/django-admin.py startproject --template=https://github.com/TaymonB/wpi-userweb-django/zipball/master "$project_name" .
+  venv/bin/django-admin.py startproject --template=https://github.com/TaymonB/wpi-userweb-django/zipball/master "$(basename "$work_tree_dir")" .
   git init --bare "$repository_dir"
   export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
   git add .
-  git commit -m "Created Django project $project_name"
+  git commit -m "Created Django project with wpi-userweb-django"
   [[ "$branch" = 'master' ]] || git checkout -b "$branch"
 fi
 
@@ -105,6 +102,12 @@ DEFAULT_FROM_EMAIL=$USER@wpi.edu
 ADMINS=$(getent passwd "$USER" | cut -d : -f 5):$USER@wpi.edu
 CAS_SERVER_URL=https://cas.wpi.edu/cas/
 EOF
+
+project_name="$(venv/bin/python manage.py shell <<EOF | grep '@' | cut -d '@' -f 2
+import os
+print('@' + os.environ['DJANGO_SETTINGS_MODULE'].rpartition('.')[0])
+EOF
+)"
 
 superdir="$site_root"
 while [[ "$superdir" != '/' ]]; do
