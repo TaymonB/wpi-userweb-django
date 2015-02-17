@@ -55,8 +55,8 @@ fi
 
 work_tree_dir="$(readlink -f "${work_tree_dir-$1}")"
 [[ -d "$work_tree_dir" ]] || mkdir "$work_tree_dir"
+repository_dir="$(readlink -f "${repository_dir-$work_tree_dir/../$(basename "$work_tree_dir").git}")"
 cd "$work_tree_dir"
-repository_dir="$(readlink -f "${repository_dir-../$(basename "$work_tree_dir").git}")"
 
 if [[ -n "${origin_url-}" ]]; then
   git clone --bare "$origin_url" "$repository_dir"
