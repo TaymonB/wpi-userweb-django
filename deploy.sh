@@ -57,10 +57,15 @@ work_tree_dir="$(readlink -f "${work_tree_dir-$1}")"
 [[ -d "$work_tree_dir" ]] || mkdir "$work_tree_dir"
 cd "$work_tree_dir"
 repository_dir="$(readlink -f "${repository_dir-../$(basename "$work_tree_dir").git}")"
-[[ -d "$repository_dir" ]] || mkdir "$repository_dir"
 
 if [[ -n "${origin_url-}" ]]; then
   git clone --bare "$origin_url" "$repository_dir"
+  export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
+  git checkout "$branch"
+  project_name="$(sed 's/^\s\s*os\.environ\.setdefault("DJANGO_SETTINGS_MODULE", "\([[:alpha:]_][[:alnum:]_]*\)\.settings")$/\1/;t;d' manage.py)"
+  python3.4 -m venv venv
+  venv/bin/pip install -r requirements.txt
+elif git rev-parse --resolve-git-dir "$repository_dir"; then
   export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
   git checkout "$branch"
   project_name="$(sed 's/^\s\s*os\.environ\.setdefault("DJANGO_SETTINGS_MODULE", "\([[:alpha:]_][[:alnum:]_]*\)\.settings")$/\1/;t;d' manage.py)"
@@ -132,21 +137,26 @@ chmod 711 "$site_root" "$site_root/media" "$site_root/static"
 chmod 755 "$site_root/$deploy_name.fcgi"
 chmod 644 "$site_root/.htaccess"
 
-cat >"$repository_dir/hooks/post-receive" <<EOF
+if [[ ! -f "$repository_dir/hooks/post-receive" ]]; then
+  cat >"$repository_dir/hooks/post-receive" <<EOF
 #!/usr/bin/env bash
 set -o errexit
 set -o pipefail
 set -o nounset
 read from to branch
-[[ "\$branch" = *'$branch' ]] || exit 0
-GIT_WORK_TREE='$work_tree_dir' git checkout --force '$branch'
-cd '$work_tree_dir'
-venv/bin/pip install -r requirements.txt
-venv/bin/python manage.py migrate --noinput
-venv/bin/python manage.py collectstatic --noinput --clear
-touch '$site_root/$deploy_name.fcgi'
 EOF
-chmod +x "$repository_dir/hooks/post-receive"
+  chmod +x "$repository_dir/hooks/post-receive"
+fi
+cat >>"$repository_dir/hooks/post-receive" <<EOF
+if [[ "\$branch" = *'$branch' ]]; then
+  GIT_WORK_TREE='$work_tree_dir' git checkout --force '$branch'
+  cd '$work_tree_dir'
+  venv/bin/pip install -r requirements.txt
+  venv/bin/python manage.py migrate --noinput
+  venv/bin/python manage.py collectstatic --noinput --clear
+  touch '$site_root/$deploy_name.fcgi'
+fi
+EOF
 
 venv/bin/python manage.py migrate --noinput
 venv/bin/python manage.py collectstatic --noinput --clear
