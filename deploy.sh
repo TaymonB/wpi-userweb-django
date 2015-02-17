@@ -79,13 +79,16 @@ else
   [[ "$branch" = 'master' ]] || git checkout -b "$branch"
 fi
 
+password="$(dd if=/dev/urandom bs=48 count=1 | base64)"
+mysql --host=mysql.wpi.edu --user="$2" --password="$3" --execute="SET PASSWORD = PASSWORD('$password')" "$1"
+
 public_html="$(readlink -f ~/public_html)"
 site_root="$(readlink -f "$public_html/$relative_path")"
 base_url="${site_root/#$public_html//~$USER}/"
 
 cat >.env <<EOF
 DEBUG=False
-DATABASE_URL=mysql://$2:$3@mysql.wpi.edu/$1
+DATABASE_URL=mysql://$2:$password@mysql.wpi.edu/$1
 BASE_URL=$base_url
 ASSETS_ROOT=$site_root
 SECRET_KEY=$(dd if=/dev/urandom bs=48 count=1 | base64)
