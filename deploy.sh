@@ -61,12 +61,12 @@ cd "$work_tree_dir"
 if [[ -n "${origin_url-}" ]]; then
   git clone --bare "$origin_url" "$repository_dir"
   export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
-  git checkout "$branch"
+  git checkout --force "$branch"
   python3.4 -m venv venv
   venv/bin/pip install -r requirements.txt
 elif git rev-parse --resolve-git-dir "$repository_dir"; then
   export GIT_DIR="$repository_dir" GIT_WORK_TREE=.
-  git checkout "$branch"
+  git checkout --force "$branch"
   python3.4 -m venv venv
   venv/bin/pip install -r requirements.txt
 else
