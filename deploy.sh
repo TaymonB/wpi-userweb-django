@@ -115,7 +115,11 @@ done
 [[ -d "$site_root" ]] || mkdir "$site_root"
 mkdir "$site_root/media" "$site_root/static"
 
-deploy_name="$(basename "$site_root")"
+if [[ "$site_root" -ef "$public_html" ]]; then
+  deploy_name="$USER"
+else
+  deploy_name="$(basename "$site_root")"
+fi
 cat >"$site_root/$deploy_name.fcgi" <<EOF
 #!$work_tree_dir/venv/bin/python
 import sys
