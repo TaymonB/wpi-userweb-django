@@ -12,7 +12,7 @@ if __name__ == '__main__':
     if sys.executable != venv_executable:
         if not os.path.exists(venv_dir):
             import venv
-            venv.create(venv_dir, use_symlinks=os.name != 'nt', with_pip=True)
+            venv.create(venv_dir, symlinks=os.name != 'nt', with_pip=True)
         os.execv(venv_executable, [venv_executable] + sys.argv)
 
     else:
