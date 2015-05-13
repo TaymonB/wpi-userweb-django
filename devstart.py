@@ -32,12 +32,10 @@ if __name__ == '__main__':
         execute_from_command_line(['', 'casdevmanage', 'migrate'])
 
         import getpass
-        from django.utils.six import PY3
-        if PY3:
-            raw_input = input
+        from django.utils.six.moves import input
         username = password = ''
         while not username:
-            username = raw_input('Enter your WPI username: ')
+            username = input('Enter your WPI username: ')
         print('Your WPI password will not be sent unencrypted or to any third party.')
         while not password:
             password = getpass.getpass('Enter your WPI password: ')

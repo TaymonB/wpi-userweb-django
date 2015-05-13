@@ -94,7 +94,6 @@ if DEBUG:
     INSTALLED_APPS = ('cas_dev_server',) + INSTALLED_APPS
 
 MIDDLEWARE_CLASSES = (
-    'sslify.middleware.SSLifyMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -102,7 +101,29 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
+)
+
+TEMPLATES = (
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': (
+            root('templates'),
+        ),
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': (
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+            ),
+        },
+    },
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -113,10 +134,6 @@ AUTHENTICATION_BACKENDS = (
 
 ROOT_URLCONF = '{{ project_name }}.urls'
 WSGI_APPLICATION = '{{ project_name }}.wsgi.application'
-
-TEMPLATE_DIRS = (
-    root('templates'),
-)
 
 STATICFILES_DIRS = (
     root('static'),
@@ -132,7 +149,7 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o711
 LOGIN_URL = 'django_cas_ng.views.login'
 LOGOUT_URL = 'django_cas_ng.views.logout'
 
-CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE = SECURE_BROWSER_XSS_FILTER = not DEBUG
 
 USE_I18N = USE_L10N = USE_TZ = True
 

@@ -43,8 +43,8 @@ fi
 
 if ! hash python3.4; then
   cd "$(mktemp -d)"
-  curl https://www.python.org/ftp/python/3.4.2/Python-3.4.2.tar.xz | unxz | tar x
-  cd Python-3.4.2
+  curl https://www.python.org/ftp/python/3.4.3/Python-3.4.3.tar.xz | unxz | tar x
+  cd Python-3.4.3
   ./configure --prefix="$HOME/.local"
   make install
   if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
@@ -71,7 +71,7 @@ elif git rev-parse --resolve-git-dir "$repository_dir"; then
   venv/bin/pip install -r requirements.txt
 else
   python3.4 -m venv venv
-  venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-dev-server django-cas-ng django-environ django-sslify flipflop ldap3 pytz
+  venv/bin/pip install Django PyMySQL django-admin-external-auth django-cas-dev-server django-cas-ng django-environ flipflop ldap3 pytz
   venv/bin/pip freeze >requirements.txt
   venv/bin/django-admin.py startproject --template=https://github.com/TaymonB/wpi-userweb-django/zipball/master "$(basename "$work_tree_dir")" .
   git init --bare "$repository_dir"
@@ -83,6 +83,8 @@ fi
 
 password="$(dd if=/dev/urandom bs=48 count=1 | base64 | tr '+/' '-_')"
 mysql --host=mysql.wpi.edu --user="$2" --password="$3" --execute="SET PASSWORD = PASSWORD('$password')" "$1"
+
+display_name="$(getent passwd "$USER" | cut -d : -f 5)"
 
 public_html="$(readlink -f ~/public_html)"
 site_root="$(readlink -f "$public_html/$relative_path")"
@@ -98,8 +100,8 @@ ALLOWED_HOSTS=users.wpi.edu
 LANGUAGE_CODE=en-us
 TIME_ZONE=America/New_York
 EMAIL_URL=smtp://localhost
-DEFAULT_FROM_EMAIL=$USER@wpi.edu
-ADMINS=$(getent passwd "$USER" | cut -d : -f 5):$USER@wpi.edu
+DEFAULT_FROM_EMAIL=$display_name <$USER@wpi.edu>
+ADMINS=$display_name:$USER@wpi.edu
 CAS_SERVER_URL=https://cas.wpi.edu/cas/
 EOF
 

@@ -65,9 +65,9 @@ Here is what the command-line parameters mean:
   to the working tree with `.git` appended.
 * `-p relative_path` specifies the URL where your project will be accessible.
   This must be given as a relative path. For example, if you are `someuser`
-  (which you're not, that's me) and you specify `-p myproject`, the root URL for
-  your project will be `https://users.wpi.edu/~someuser/myproject/`. By default,
-  the project's root URL is the root URL of your web space.
+  and you specify `-p myproject`, the root URL for your project will be
+  `https://users.wpi.edu/~someuser/myproject/`. By default, the project's root
+  URL is the root URL of your web space.
 * `db_name` is the name of the database you created.
 * `db_username` is the username of the database user you created.
 * `db_password` is the password that was generated when you created the
